@@ -1,0 +1,19 @@
+{
+  "name": "proxy-staking-demo",
+  "version": "0.1.0",
+  "main": "build/index.js",
+  "repository": "https://github.com/emostov/proxy-staking-demo.git",
+  "author": "emostov <32168567+emostov@users.noreply.github.com>",
+  "license": "APACHE-2.0",
+  "private": false,
+  "scripts": {
+    "lint": "eslint",
+    "build": "tsc"
+  },
+  "devDependencies": {
+    "@substrate/dev": "^0.5.2"
+  },
+  "dependencies": {
+    "@polkadot/api": "^4.7.2"
+  }
+}

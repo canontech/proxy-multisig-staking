@@ -1,0 +1,9 @@
+{
+  "extends": "@substrate/dev/config/tsconfig.json",
+  "compilerOptions": {
+    "outDir": "build",
+  },
+  "include": [
+    "src"
+  ]
+}
