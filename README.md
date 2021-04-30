@@ -1,5 +1,7 @@
 # proxy-multisig-staking
 
+WIP
+
 ## Demo workflow
 
 - Eve create anonymous proxy, `A`, with herself as an `Any` proxy.
@@ -8,9 +10,9 @@
   - `proxy.proxy(proxy.addProxy)`
 - Eve adds 1/3 multsig `C`, as a `CancelProxy`
   - `proxy.proxy(proxy.addProxy)`
-- `M` executes `staking.bond` on behalf of `A`
+-`M` executes `staking.bond` on behalf of `A`
   - `multisig.approveAsMulti(proxy.announce(staking.bond))`
-  - `multisig.asMulti(proxy.announce(staking.bond))`
+  - `multisig.asMulti(proxy.announce(staking.bond))` (current stops here)
   - Wait for announcement delay
   - `multisig.approveAsMulti(proxy.proxy(staking.bond))`
   - `multisig.asMulti(proxy.proxy(staking.bond))`
