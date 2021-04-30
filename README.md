@@ -21,4 +21,4 @@
 
 ## TODO
 
-- Build announcement watchdog
+- Design & build announcement watchdog

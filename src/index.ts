@@ -1,7 +1,7 @@
 import { ApiPromise, WsProvider } from '@polkadot/api';
 import { SubmittableExtrinsic } from '@polkadot/api/types';
 import { KeyringPair } from '@polkadot/keyring/types';
-import { Hash } from '@polkadot/types/interfaces';
+import { Hash, ProxyType } from '@polkadot/types/interfaces';
 import {
 	createKeyMulti,
 	encodeAddress,
@@ -36,9 +36,48 @@ async function main() {
 	logSeperator();
 	await waitToContinue();
 
-	/* Create multisig address and fund account */
 	const SS58Prefix = 0;
 	const threshold = 2;
+
+	/* Create CancelProxy multisig account and fund address */
+	const cancelAddresses = [
+		keys.charlie.address,
+		keys.dave.address,
+		keys.ferdie.address,
+	];
+	const canceMultiAddr = createKeyMulti(cancelAddresses, threshold);
+	const cancelSs58MultiAddr = encodeAddress(canceMultiAddr, SS58Prefix);
+	console.log(
+		`Cancel multisig address (Charlie+dave+ferdie): ${cancelSs58MultiAddr}`
+	);
+	console.log(
+		'\nCreating Cancel multisig account on chain by funding Cancel multisig address'
+	);
+	const { hash: hashX } = await transferKeepAlive(
+		api,
+		keys.charlie,
+		cancelSs58MultiAddr,
+		AMOUNT
+	);
+	console.log(`Cancel multisig endowed at block hash: ${hashX.toString()}`);
+
+	/* Add multisig as a CancelProxy to Anon */
+	const cancelProxyDelay = 0; // NO delay, NO announcements neccesary
+	const addCancelProxyCall = api.tx.proxy.addProxy(
+		cancelSs58MultiAddr,
+		('CancelProxy' as unknown) as ProxyType, // api does not recognize CancelProxy
+		cancelProxyDelay
+	);
+	const { hash: hashY } = await signAndSend(
+		api,
+		keys.eve,
+		api.tx.proxy.proxy(anonAddr, 'Any', addCancelProxyCall)
+	);
+	console.log(`Cancel multisig proxy added at block hash: ${hashY.toString()}`);
+	logSeperator();
+	await waitToContinue();
+
+	/* Create Staking multisig address and fund account */
 	// Input the addresses that will make up the multisig account.
 	const addresses = [keys.alice.address, keys.dave.address, keys.bob.address];
 	// Address as a byte array.
@@ -47,7 +86,7 @@ async function main() {
 	const ss58MultiAddr = encodeAddress(multiAddr, SS58Prefix);
 	console.log(`Staking multisig address (Alice+Bob+Dave): ${ss58MultiAddr}`);
 	console.log(
-		'\nCreating multisig account on chain by funding multisig address'
+		'\nCreating staking multisig account on chain by funding multisig address'
 	);
 	const { hash: hash2 } = await transferKeepAlive(
 		api,
@@ -55,7 +94,7 @@ async function main() {
 		ss58MultiAddr,
 		AMOUNT
 	);
-	console.log(`Multisig endowed at block hash: ${hash2.toString()}`);
+	console.log(`Staking multisig endowed at block hash: ${hash2.toString()}`);
 	logSeperator();
 	await waitToContinue();
 
