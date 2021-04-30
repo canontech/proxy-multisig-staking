@@ -22,13 +22,13 @@ async function main() {
 	const keys = await devKeys();
 
 	/* Create the anon proxy and extract its address from tx events */
-	const { anonAddr, hash: hash0 } = await createAnon(api, keys.alice);
+	const { anonAddr, hash: hash0 } = await createAnon(api, keys.eve);
 	console.log(`Anon created at block hash: ${hash0.toString()}`);
 	console.log(`The Anon address is ${anonAddr}`);
 	console.log(`\nFund the Anon account so we can bond something later`);
 	const { hash: hash1 } = await transferKeepAlive(
 		api,
-		keys.eve,
+		keys.ferdie,
 		anonAddr,
 		AMOUNT
 	);
@@ -101,6 +101,8 @@ async function main() {
 		"Alice's approveAsMulti(proxy(bond(Anon))) was included at timepoint: ",
 		timepoint1
 	);
+	logSeperator();
+	await waitToContinue();
 
 	const bobAsMulti = api.tx.multisig.asMulti(
 		2,
@@ -112,7 +114,7 @@ async function main() {
 	);
 	const { hash: hash5 } = await signAndSend(keys.bob, bobAsMulti);
 	console.log(
-		`Bob\'s approveAsMulti(proxy(bond(Anon))) was executed at block hash: ${hash5.toString()}`
+		`Bob\'s asMulti(proxy(bond(Anon))) was executed at block hash: ${hash5.toString()}`
 	);
 
 	process.exit(0);
