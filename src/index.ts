@@ -11,7 +11,7 @@ import {
 import { devKeys } from './devKeys';
 import { logSeperator, waitToContinue } from './util';
 const AMOUNT = '123456789012345';
-const MAX_WEIGHT = 10000;
+const MAX_WEIGHT = 1_000_000_000_000;
 
 async function main() {
 	// Initialise the provider to connect to the local node
@@ -67,6 +67,7 @@ async function main() {
 		stakingProxyDelay
 	);
 	const { hash: hash3 } = await signAndSend(
+		api,
 		keys.eve,
 		api.tx.proxy.proxy(anonAddr, 'Any', addStakingProxyCall)
 	);
@@ -91,7 +92,11 @@ async function main() {
 		announceAnonBond.method.hash,
 		MAX_WEIGHT
 	);
-	const { hash: hash4 } = await signAndSend(keys.alice, aliceApproveAsMulti);
+	const { hash: hash4 } = await signAndSend(
+		api,
+		keys.alice,
+		aliceApproveAsMulti
+	);
 	const timepoint1 = await getTimepoint(
 		api,
 		hash4.toString(),
@@ -112,7 +117,7 @@ async function main() {
 		false,
 		MAX_WEIGHT
 	);
-	const { hash: hash5 } = await signAndSend(keys.bob, bobAsMulti);
+	const { hash: hash5 } = await signAndSend(api, keys.bob, bobAsMulti);
 	console.log(
 		`Bob\'s asMulti(proxy(bond(Anon))) was executed at block hash: ${hash5.toString()}`
 	);
@@ -160,13 +165,29 @@ function otherSigs(addresses: string[], signatory: string): string[] {
 	return sortAddresses(toSort);
 }
 
+// TODO maybe iterate through events and display
 async function signAndSend(
+	api: ApiPromise,
 	origin: KeyringPair,
 	tx: SubmittableExtrinsic<'promise'>
 ): Promise<{ hash: Hash }> {
 	console.log('Submitting tx:  ', tx.method.toHuman());
 	const info: { hash: Hash } = await new Promise((resolve, _reject) => {
 		void tx.signAndSend(origin, (r) => {
+			if (r.dispatchError) {
+				if (r.dispatchError.isModule) {
+					// for module errors, we have the section indexed, lookup
+					const decoded = api.registry.findMetaError(r.dispatchError.asModule);
+					const { documentation, name, section } = decoded;
+					const err = `${section}.${name}: ${documentation.join(' ')}`;
+					console.log(err);
+					throw err;
+				} else {
+					// Other, CannotLookup, BadOrigin, no extra info
+					console.log(r.dispatchError.toString());
+					throw r.dispatchError.toString();
+				}
+			}
 			if (r.status.isFinalized) {
 				resolve({ hash: r.status.asFinalized });
 			}
@@ -187,7 +208,21 @@ async function createAnon(
 		(resovle, _reject) => {
 			const tx = api.tx.proxy.anonymous('Any', anonProxyDelay, anonProxyIndex);
 			console.log('Submitting tx:  ', tx.method.toHuman());
-			void tx.signAndSend(alice, ({ status, events }) => {
+			void tx.signAndSend(alice, ({ status, events, dispatchError }) => {
+				if (dispatchError) {
+					if (dispatchError.isModule) {
+						// for module errors, we have the section indexed, lookup
+						const decoded = api.registry.findMetaError(dispatchError.asModule);
+						const { documentation, name, section } = decoded;
+						const err = `${section}.${name}: ${documentation.join(' ')}`;
+						console.log(err);
+						throw err;
+					} else {
+						// Other, CannotLookup, BadOrigin, no extra info
+						console.log(dispatchError.toString());
+						throw dispatchError.toString();
+					}
+				}
 				if (status.isFinalized) {
 					const anonCreated = events.find(({ event }) =>
 						api.events.proxy.AnonymousCreated.is(event)
@@ -218,7 +253,22 @@ async function transferKeepAlive(
 	const info: { hash: Hash } = await new Promise((resolve, _reject) => {
 		const tx = api.tx.balances.transferKeepAlive(to, amount);
 		console.log('Submitting tx:  ', tx.method.toHuman());
-		void tx.signAndSend(origin, ({ status }) => {
+		void tx.signAndSend(origin, ({ status, dispatchError }) => {
+			if (dispatchError) {
+				// TODO this dispatch error section can be dried up
+				if (dispatchError.isModule) {
+					// for module errors, we have the section indexed, lookup
+					const decoded = api.registry.findMetaError(dispatchError.asModule);
+					const { documentation, name, section } = decoded;
+					const err = `${section}.${name}: ${documentation.join(' ')}`;
+					console.log(err);
+					throw err;
+				} else {
+					// Other, CannotLookup, BadOrigin, no extra info
+					console.log(dispatchError.toString());
+					throw dispatchError.toString();
+				}
+			}
 			if (status.isFinalized) {
 				resolve({ hash: status.asFinalized });
 			}
