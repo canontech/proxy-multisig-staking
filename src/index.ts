@@ -70,7 +70,9 @@ async function main() {
 		keys.eve,
 		api.tx.proxy.proxy(anonAddr, 'Any', addStakingProxyCall)
 	);
-	console.log(`Staking proxy added at block hash: ${hash3.toString()}`);
+	console.log(
+		`Staking multisig proxy added at block hash: ${hash3.toString()}`
+	);
 	logSeperator();
 	await waitToContinue();
 
@@ -82,18 +84,67 @@ async function main() {
 		anonAddr,
 		anonBond.method.hash
 	);
-	await signAndSend(
-		keys.alice,
-		api.tx.multisig.approveAsMulti(
-			2,
-			otherSigs(addresses, keys.alice.address),
-			null,
-			announceAnonBond.method.hash,
-			MAX_WEIGHT
-		)
+	const aliceApproveAsMulti = api.tx.multisig.approveAsMulti(
+		2,
+		otherSigs(addresses, keys.alice.address),
+		null,
+		announceAnonBond.method.hash,
+		MAX_WEIGHT
+	);
+	const { hash: hash4 } = await signAndSend(keys.alice, aliceApproveAsMulti);
+	const timepoint1 = await getTimepoint(
+		api,
+		hash4.toString(),
+		aliceApproveAsMulti.method.hash.toString()
+	);
+	console.log(
+		"Alice's approveAsMulti(proxy(bond(Anon))) was included at timepoint: ",
+		timepoint1
+	);
+
+	const bobAsMulti = api.tx.multisig.asMulti(
+		2,
+		otherSigs(addresses, keys.bob.address),
+		timepoint1,
+		announceAnonBond.method.toHex(),
+		false,
+		MAX_WEIGHT
+	);
+	const { hash: hash5 } = await signAndSend(keys.bob, bobAsMulti);
+	console.log(
+		`Bob\'s approveAsMulti(proxy(bond(Anon))) was executed at block hash: ${hash5.toString()}`
 	);
 
 	process.exit(0);
+}
+
+/**
+ * NOTE IMPORTANT this is not a good way to find a timepoint because there could be multiple of the
+ * same tx within a block. This is for demonstration purposes only.
+ *
+ * Get the timepoint of an extrinsic.
+ *
+ * @param api
+ * @param blockHash
+ * @param txHash
+ * @returns
+ */
+async function getTimepoint(
+	api: ApiPromise,
+	blockHash: string,
+	txHash: string
+): Promise<{ height: string; index: number }> {
+	const {
+		block: {
+			extrinsics,
+			header: { number },
+		},
+	} = await api.rpc.chain.getBlock(blockHash);
+	const index = extrinsics.findIndex(
+		(ext) => ext.method.hash.toString() === txHash
+	);
+
+	return { height: number.unwrap().toString(10), index };
 }
 
 /**
@@ -155,6 +206,7 @@ async function createAnon(
 	return info;
 }
 
+// TODO can just use signAndSend instead
 async function transferKeepAlive(
 	api: ApiPromise,
 	origin: KeyringPair,
