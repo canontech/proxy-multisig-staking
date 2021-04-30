@@ -142,7 +142,7 @@ async function main() {
 		aliceApproveAsMulti.method.hash.toString()
 	);
 	console.log(
-		"Alice's approveAsMulti(proxy(bond(Anon))) was included at timepoint: ",
+		"Alice's approveAsMulti(announce(bond(Anon))) was included at timepoint: ",
 		timepoint1
 	);
 	logSeperator();
@@ -158,7 +158,7 @@ async function main() {
 	);
 	const { hash: hash5 } = await signAndSend(api, keys.bob, bobAsMulti);
 	console.log(
-		`Bob\'s asMulti(proxy(bond(Anon))) was executed at block hash: ${hash5.toString()}`
+		`Bob\'s asMulti(announce(bond(Anon))) was executed at block hash: ${hash5.toString()}`
 	);
 
 	process.exit(0);
