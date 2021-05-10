@@ -1,11 +1,14 @@
+/* eslint-disable @typescript-eslint/restrict-template-expressions */
 import { ApiPromise, WsProvider } from '@polkadot/api';
 import { KeyringPair } from '@polkadot/keyring/types';
 import { Hash, ProxyType } from '@polkadot/types/interfaces';
 import { createKeyMulti, encodeAddress } from '@polkadot/util-crypto';
 
 import { devKeys } from './devKeys';
-import { executeMultiSig } from './executeMultiSig';
-import { logSeperator, signAndSend, waitToContinue } from './util';
+import { logSeperator, waitToContinue } from './display';
+import { executeMultisig } from './executeMultisig';
+import { signAndSend } from './tx';
+
 const AMOUNT = '123456789012345';
 const THRESHOLD = 2;
 
@@ -19,16 +22,15 @@ async function main() {
 
 	/* Create the anon proxy and extract its address from tx events */
 	const { anonAddr, hash: hash0 } = await createAnon(api, keys.eve);
-	console.log(`Anon created at block hash: ${hash0.toString()}`);
+	console.log(`Anon created at: ${hash0.toString()}`);
 	console.log(`The Anon address is ${anonAddr}`);
 	console.log(`\nFund the Anon account so we can bond something later`);
-	const { hash: hash1 } = await transferKeepAlive(
+	const { timepoint: timepoint1 } = await signAndSend(
 		api,
 		keys.ferdie,
-		anonAddr,
-		AMOUNT
+		api.tx.balances.transferKeepAlive(anonAddr, AMOUNT)
 	);
-	console.log(`Anon funding increased at block hash: ${hash1.toString()}`);
+	console.log(`Anon funding increased at: ${timepoint1.toString()}`);
 	logSeperator();
 	await waitToContinue();
 
@@ -48,13 +50,12 @@ async function main() {
 	console.log(
 		'\nCreating Cancel multisig account on chain by funding Cancel multisig address'
 	);
-	const { hash: hashX } = await transferKeepAlive(
+	const { timepoint: timepoint2 } = await signAndSend(
 		api,
 		keys.charlie,
-		cancelSs58MultiAddr,
-		AMOUNT
+		api.tx.balances.transferKeepAlive(cancelSs58MultiAddr, AMOUNT)
 	);
-	console.log(`Cancel multisig endowed at block hash: ${hashX.toString()}`);
+	console.log(`Cancel multisig endowed at: ${timepoint2}`);
 
 	/* Add multisig as a CancelProxy to Anon */
 	const cancelProxyDelay = 0; // NO delay, NO announcements neccesary
@@ -63,12 +64,12 @@ async function main() {
 		('CancelProxy' as unknown) as ProxyType, // api does not recognize CancelProxy
 		cancelProxyDelay
 	);
-	const { hash: hashY } = await signAndSend(
+	const { timepoint: timepoint3 } = await signAndSend(
 		api,
 		keys.eve,
 		api.tx.proxy.proxy(anonAddr, 'Any', addCancelProxyCall)
 	);
-	console.log(`Cancel multisig proxy added at block hash: ${hashY.toString()}`);
+	console.log(`Cancel multisig proxy added at: ${timepoint3}`);
 	logSeperator();
 	await waitToContinue();
 
@@ -91,13 +92,12 @@ async function main() {
 	console.log(
 		'\nCreating staking multisig account on chain by funding multisig address'
 	);
-	const { hash: hash2 } = await transferKeepAlive(
+	const { timepoint: timepoint4 } = await signAndSend(
 		api,
 		keys.alice,
-		ss58StakingCompositeAddr,
-		AMOUNT
+		api.tx.balances.transferKeepAlive(ss58StakingCompositeAddr, AMOUNT)
 	);
-	console.log(`Staking multisig endowed at block hash: ${hash2.toString()}`);
+	console.log(`Staking multisig endowed at: ${timepoint4}`);
 	logSeperator();
 	await waitToContinue();
 
@@ -108,14 +108,12 @@ async function main() {
 		'Staking',
 		stakingProxyDelay
 	);
-	const { hash: hash3 } = await signAndSend(
+	const { timepoint: timepoint5 } = await signAndSend(
 		api,
 		keys.eve,
 		api.tx.proxy.proxy(anonAddr, 'Any', addStakingProxyCall)
 	);
-	console.log(
-		`Staking multisig proxy added at block hash: ${hash3.toString()}`
-	);
+	console.log(`Staking multisig proxy added at: ${timepoint5}`);
 	logSeperator();
 	await waitToContinue();
 
@@ -123,11 +121,21 @@ async function main() {
 	const anonBond = api.tx.staking.bond(keys.ferdie.address, AMOUNT, {
 		Staked: null,
 	});
+
+	/* First announce the staking.bond */
 	const announceAnonBond = api.tx.proxy.announce(
 		anonAddr,
 		anonBond.method.hash
 	);
-	await executeMultiSig(api, announceAnonBond, stakingComposite, 2);
+	await executeMultisig(api, announceAnonBond, stakingComposite, 2);
+
+	/* Then execute the staking.bond */
+	const proxyAnonBond = api.tx.proxy.proxy(
+		anonAddr,
+		'Staking',
+		anonBond.method.hash
+	);
+	await executeMultisig(api, proxyAnonBond, stakingComposite, 2);
 
 	process.exit(0);
 }
@@ -174,41 +182,6 @@ async function createAnon(
 			});
 		}
 	);
-
-	return info;
-}
-
-// TODO can just use signAndSend instead
-async function transferKeepAlive(
-	api: ApiPromise,
-	origin: KeyringPair,
-	to: string,
-	amount: string
-): Promise<{ hash: Hash }> {
-	const info: { hash: Hash } = await new Promise((resolve, _reject) => {
-		const tx = api.tx.balances.transferKeepAlive(to, amount);
-		console.log('Submitting tx:  ', tx.method.toHuman());
-		void tx.signAndSend(origin, ({ status, dispatchError }) => {
-			if (dispatchError) {
-				// TODO this dispatch error section can be dried up
-				if (dispatchError.isModule) {
-					// for module errors, we have the section indexed, lookup
-					const decoded = api.registry.findMetaError(dispatchError.asModule);
-					const { documentation, name, section } = decoded;
-					const err = `${section}.${name}: ${documentation.join(' ')}`;
-					console.log(err);
-					throw err;
-				} else {
-					// Other, CannotLookup, BadOrigin, no extra info
-					console.log(dispatchError.toString());
-					throw dispatchError.toString();
-				}
-			}
-			if (status.isFinalized) {
-				resolve({ hash: status.asFinalized });
-			}
-		});
-	});
 
 	return info;
 }

@@ -3,22 +3,31 @@ import { ApiPromise } from '@polkadot/api';
 import { SubmittableExtrinsic } from '@polkadot/api/types';
 import { KeyringPair } from '@polkadot/keyring/types';
 
-import {
-	getTimepoint,
-	logSeperator,
-	otherSigs,
-	signAndSend,
-	waitToContinue,
-} from './util';
+import { Timepoint } from './chainSync';
+import { logSeperator, waitToContinue } from './display';
+import { otherSigs } from './multisigUtil';
+import { signAndSend } from './tx';
 
 const MAX_WEIGHT = 1_000_000_000_000;
 
-export async function executeMultiSig(
+/**
+ * Execute all the steps of a multisig.
+ *
+ * Executes `threshold - 1` approveAsMulti and 1 asMulti to actually execute
+ * `call`.
+ *
+ * @param api
+ * @param call
+ * @param keys
+ * @param threshold
+ * @returns Timepoint the `call` was actually executed
+ */
+export async function executeMultisig(
 	api: ApiPromise,
 	call: SubmittableExtrinsic<'promise'>,
 	keys: KeyringPair[],
 	threshold: number
-): Promise<void> {
+): Promise<Timepoint> {
 	const addresses = keys.map(({ address }) => address);
 
 	let maybeTimepoint = null;
@@ -36,22 +45,16 @@ export async function executeMultiSig(
 		console.log(
 			`${keys[i].meta.name} is sending approveAsMulti(${call.method.section}.${call.method.method})`
 		);
-		const { hash } = await signAndSend(api, keys[i], approve);
+		const { timepoint } = await signAndSend(api, keys[i], approve);
 
 		if (i === 0) {
 			// This is the first approval tx so we need to get the timepoint and save it
 			// so we can refference in the remaining multisig txs
-			maybeTimepoint = await getTimepoint(
-				api,
-				hash.toString(),
-				approve.method.hash.toHex()
-			);
+			maybeTimepoint = timepoint;
 		}
 
 		console.log(
-			`${keys[i].meta.name}'s approveAsMulti(${call.method.section}.${
-				call.method.method
-			}) included at block hash: ${hash.toHex()}`
+			`${keys[i].meta.name}'s approveAsMulti(${call.method.section}.${call.method.method}) included at: ${timepoint}`
 		);
 		logSeperator();
 		await waitToContinue();
@@ -69,12 +72,12 @@ export async function executeMultiSig(
 	console.log(
 		`${keys[i].meta.name} is sending asMulti(${call.method.section}.${call.method.method})`
 	);
-	const { hash } = await signAndSend(api, keys[i], asMulti);
+	const { timepoint } = await signAndSend(api, keys[i], asMulti);
 	console.log(
-		`${keys[i].meta.name}'s asMulti(${call.method.section}.${
-			call.method.method
-		}) included at block hash: ${hash.toHex()}`
+		`${keys[i].meta.name}'s asMulti(${call.method.section}.${call.method.method}) included at timepoint: ${timepoint}`
 	);
 	logSeperator();
 	await waitToContinue();
+
+	return timepoint;
 }
