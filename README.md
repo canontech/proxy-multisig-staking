@@ -2,6 +2,26 @@
 
 WIP
 
+## Run
+
+Start a substrate or polkadot `--dev --tmp` node. (Use temp because we need to purge the DB between demo runs.)
+
+```console
+TODO
+```
+
+Install dependencies
+
+```console
+yarn install
+```
+
+Run the demo
+
+```console
+yarn start
+```
+
 ## Demo workflow
 
 - Eve create anonymous proxy, `A`, with herself as an `Any` proxy.
