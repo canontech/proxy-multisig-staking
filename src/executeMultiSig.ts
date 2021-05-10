@@ -54,7 +54,8 @@ export async function executeMultisig(
 		}
 
 		console.log(
-			`${keys[i].meta.name}'s approveAsMulti(${call.method.section}.${call.method.method}) included at: ${timepoint}`
+			`${keys[i].meta.name}'s approveAsMulti(${call.method.section}.${call.method.method}) included at: `,
+			timepoint
 		);
 		logSeperator();
 		await waitToContinue();
@@ -74,7 +75,8 @@ export async function executeMultisig(
 	);
 	const { timepoint } = await signAndSend(api, keys[i], asMulti);
 	console.log(
-		`${keys[i].meta.name}'s asMulti(${call.method.section}.${call.method.method}) included at timepoint: ${timepoint}`
+		`${keys[i].meta.name}'s asMulti(${call.method.section}.${call.method.method}) included at timepoint: `,
+		timepoint
 	);
 	logSeperator();
 	await waitToContinue();

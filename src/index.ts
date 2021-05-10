@@ -13,6 +13,7 @@ import { signAndSend } from './tx';
 const AMOUNT = '123456789012345';
 const THRESHOLD = 2;
 const ANNOUNCE_DELAY = 5; // 5 blocks = 30 secs
+const STAKING_PROXY = 'Staking';
 
 async function main() {
 	// Initialise the provider to connect to the local node
@@ -32,7 +33,7 @@ async function main() {
 		keys.ferdie,
 		api.tx.balances.transferKeepAlive(anonAddr, AMOUNT)
 	);
-	console.log(`Anon funding increased at: ${timepoint1.toString()}`);
+	console.log(`Anon funding increased at: `, timepoint1);
 	logSeperator();
 	await waitToContinue();
 
@@ -57,7 +58,7 @@ async function main() {
 		keys.charlie,
 		api.tx.balances.transferKeepAlive(cancelSs58MultiAddr, AMOUNT)
 	);
-	console.log(`Cancel multisig endowed at: ${timepoint2}`);
+	console.log(`Cancel multisig endowed at: `, timepoint2);
 
 	/* Add multisig as a CancelProxy to Anon */
 	const cancelProxyDelay = 0; // NO delay, NO announcements neccesary
@@ -71,7 +72,7 @@ async function main() {
 		keys.eve,
 		api.tx.proxy.proxy(anonAddr, 'Any', addCancelProxyCall)
 	);
-	console.log(`Cancel multisig proxy added at: ${timepoint3}`);
+	console.log(`Cancel multisig proxy added at: `, timepoint3);
 	logSeperator();
 	await waitToContinue();
 
@@ -99,7 +100,7 @@ async function main() {
 		keys.alice,
 		api.tx.balances.transferKeepAlive(ss58StakingCompositeAddr, AMOUNT)
 	);
-	console.log(`Staking multisig endowed at: ${timepoint4}`);
+	console.log(`Staking multisig endowed at: `, timepoint4);
 	logSeperator();
 	await waitToContinue();
 
@@ -107,7 +108,7 @@ async function main() {
 
 	const addStakingProxyCall = api.tx.proxy.addProxy(
 		ss58StakingCompositeAddr,
-		'Staking',
+		STAKING_PROXY,
 		ANNOUNCE_DELAY
 	);
 	const { timepoint: timepoint5 } = await signAndSend(
@@ -115,7 +116,7 @@ async function main() {
 		keys.eve,
 		api.tx.proxy.proxy(anonAddr, 'Any', addStakingProxyCall)
 	);
-	console.log(`Staking multisig proxy added at: ${timepoint5}`);
+	console.log(`Staking multisig proxy added at: `, timepoint5);
 	logSeperator();
 	await waitToContinue();
 
@@ -129,7 +130,7 @@ async function main() {
 		anonAddr,
 		anonBond.method.hash
 	);
-	const timepointAnnouncAnonBond = await executeMultisig(
+	const timepointAnnounceAnonBond = await executeMultisig(
 		api,
 		announceAnonBond,
 		stakingComposite,
@@ -137,19 +138,25 @@ async function main() {
 	);
 
 	const delayEndHeight =
-		parseInt(timepointAnnouncAnonBond.height) + ANNOUNCE_DELAY;
+		parseInt(timepointAnnounceAnonBond.height) + ANNOUNCE_DELAY;
 	console.log(
 		`Waiting for annoucement delay to end at block height ${delayEndHeight}`
 	);
 	await waitUntilHeight(api, delayEndHeight);
 
 	/* Then execute the staking.bond */
-	const proxyAnonBond = api.tx.proxy.proxy(
+	const proxyAnonBond = api.tx.proxy.proxyAnnounced(
+		ss58StakingCompositeAddr,
 		anonAddr,
-		'Staking',
-		anonBond.method.hash
+		STAKING_PROXY,
+		anonBond
 	);
-	await executeMultisig(api, proxyAnonBond, stakingComposite, 2);
+	const { timepoint: timepoint6 } = await signAndSend(
+		api,
+		keys.alice,
+		proxyAnonBond
+	);
+	console.log('Alice executed proxyAnnounced(bond(Anon)) at: ', timepoint6);
 
 	process.exit(0);
 }
@@ -180,7 +187,7 @@ async function createAnon(
 						throw dispatchError.toString();
 					}
 				}
-				if (status.isFinalized) {
+				if (status.isInBlock) {
 					const anonCreated = events.find(({ event }) =>
 						api.events.proxy.AnonymousCreated.is(event)
 					);
@@ -190,7 +197,7 @@ async function createAnon(
 					const anonAddr = anonCreated.event.data[0].toString();
 					resovle({
 						anonAddr,
-						hash: status.asFinalized,
+						hash: status.asInBlock,
 					});
 				}
 			});

@@ -30,8 +30,8 @@ export async function signAndSend(
 						throw dispatchError.toString();
 					}
 				}
-				if (status.isFinalized) {
-					const { number } = await api.rpc.chain.getHeader(status.asFinalized);
+				if (status.isInBlock) {
+					const { number } = await api.rpc.chain.getHeader(status.asInBlock);
 					console.log('Events: ');
 					events.forEach(
 						({
@@ -47,7 +47,7 @@ export async function signAndSend(
 						}
 					);
 					resolve({
-						hash: status.asFinalized,
+						hash: status.asInBlock,
 						timepoint: {
 							index: events[0].phase.asApplyExtrinsic.toNumber(),
 							height: number.unwrap().toString(10),

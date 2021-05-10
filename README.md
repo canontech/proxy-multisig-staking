@@ -34,8 +34,8 @@ yarn start
   - `multisig.approveAsMulti(proxy.announce(staking.bond))`
   - `multisig.asMulti(proxy.announce(staking.bond))` (current stops here)
   - Wait for announcement delay
-  - `multisig.approveAsMulti(proxy.proxy(staking.bond))`
-  - `multisig.asMulti(proxy.proxy(staking.bond))`
+  - `multisig.approveAsMulti(proxy.proxyAnnounced(staking.bond))`
+  - `multisig.asMulti(proxy.proxyAnnounced(staking.bond))`
 - `M` executes `session.setKeys` on behalf of `A`
   - ...
 - `M` executes `staking.validate` on behalf of `A`

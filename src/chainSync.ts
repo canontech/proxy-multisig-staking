@@ -41,13 +41,10 @@ export async function waitUntilHeight(
 	height: number
 ): Promise<void> {
 	return new Promise((resolve, _reject) => {
-		let unsub: () => void;
-		void api.rpc.chain
-			.subscribeFinalizedHeads(({ number }) => {
-				number.unwrap().gten(height);
-				unsub && unsub();
+		void api.rpc.chain.subscribeNewHeads(({ number }) => {
+			if (number.unwrap().gten(height)) {
 				resolve();
-			})
-			.then((u) => (unsub = u));
+			}
+		});
 	});
 }
