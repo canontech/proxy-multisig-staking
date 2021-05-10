@@ -4,6 +4,7 @@ import { KeyringPair } from '@polkadot/keyring/types';
 import { Hash, ProxyType } from '@polkadot/types/interfaces';
 import { createKeyMulti, encodeAddress } from '@polkadot/util-crypto';
 
+import { waitUntilHeight } from './chainSync';
 import { devKeys } from './devKeys';
 import { logSeperator, waitToContinue } from './display';
 import { executeMultisig } from './executeMultisig';
@@ -11,6 +12,7 @@ import { signAndSend } from './tx';
 
 const AMOUNT = '123456789012345';
 const THRESHOLD = 2;
+const ANNOUNCE_DELAY = 5; // 5 blocks = 30 secs
 
 async function main() {
 	// Initialise the provider to connect to the local node
@@ -102,11 +104,11 @@ async function main() {
 	await waitToContinue();
 
 	/* Add multisig as a staking proxy to Anon account */
-	const stakingProxyDelay = 10; // 10 blocks = 1 minute
+
 	const addStakingProxyCall = api.tx.proxy.addProxy(
 		ss58StakingCompositeAddr,
 		'Staking',
-		stakingProxyDelay
+		ANNOUNCE_DELAY
 	);
 	const { timepoint: timepoint5 } = await signAndSend(
 		api,
@@ -127,7 +129,19 @@ async function main() {
 		anonAddr,
 		anonBond.method.hash
 	);
-	await executeMultisig(api, announceAnonBond, stakingComposite, 2);
+	const timepointAnnouncAnonBond = await executeMultisig(
+		api,
+		announceAnonBond,
+		stakingComposite,
+		2
+	);
+
+	const delayEndHeight =
+		parseInt(timepointAnnouncAnonBond.height) + ANNOUNCE_DELAY;
+	console.log(
+		`Waiting for annoucement delay to end at block height ${delayEndHeight}`
+	);
+	await waitUntilHeight(api, delayEndHeight);
 
 	/* Then execute the staking.bond */
 	const proxyAnonBond = api.tx.proxy.proxy(

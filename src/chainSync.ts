@@ -35,3 +35,19 @@ export async function getTimepoint(
 
 	return { height: number.unwrap().toString(10), index };
 }
+
+export async function waitUntilHeight(
+	api: ApiPromise,
+	height: number
+): Promise<void> {
+	return new Promise((resolve, _reject) => {
+		let unsub: () => void;
+		void api.rpc.chain
+			.subscribeFinalizedHeads(({ number }) => {
+				number.unwrap().gten(height);
+				unsub && unsub();
+				resolve();
+			})
+			.then((u) => (unsub = u));
+	});
+}
