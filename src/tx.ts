@@ -12,7 +12,14 @@ export async function signAndSend(
 	origin: KeyringPair,
 	tx: SubmittableExtrinsic<'promise'>
 ): Promise<{ hash: Hash; timepoint: Timepoint }> {
-	console.log('Submitting tx:  ', tx.method.toHuman());
+	const {
+		method: { section, method, args },
+	} = tx;
+	console.log(
+		`Submitting tx:  ${section}.${method}(${args
+			.map((a) => JSON.stringify(a.toHuman()))
+			.join(', ')})`
+	);
 	const info: { hash: Hash; timepoint: Timepoint } = await new Promise(
 		(resolve, _reject) => {
 			void tx.signAndSend(origin, async ({ dispatchError, status, events }) => {

@@ -5,7 +5,7 @@ import { KeyringPair } from '@polkadot/keyring/types';
 
 import { Timepoint } from './chainSync';
 import { logSeperator, waitToContinue } from './display';
-import { otherSigs } from './multisigUtil';
+import { otherSigs } from './multisig';
 import { signAndSend } from './tx';
 
 const MAX_WEIGHT = 1_000_000_000_000;
