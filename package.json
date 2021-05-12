@@ -9,8 +9,7 @@
   "scripts": {
     "lint": "eslint",
     "build": "tsc",
-    "start": "./node_modules/.bin/ts-node src/index.ts",
-    "start:polkadot": "./bin/polkadot --dev --tmp"
+    "start": "./node_modules/.bin/ts-node src/index.ts"
   },
   "devDependencies": {
     "@substrate/dev": "^0.5.2",

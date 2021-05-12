@@ -7,7 +7,7 @@ import { waitUntilHeight } from './chainSync';
 import { devKeys } from './devKeys';
 import { logSeperator, waitToContinue } from './display';
 import { executeMultisig } from './executeMultisig';
-import { createAndEndowMulti } from './multisig';
+import { createAndEndowMulti, otherSigs } from './multisig';
 import { signAndSend } from './tx';
 
 const AMOUNT = '123456789012345';
@@ -92,15 +92,33 @@ async function main() {
 	logSeperator();
 	await waitToContinue();
 
-	/* Use multisig to execute staking.bond */
+	/* Use multisig to execute batchAll(staking.bond, staking.setKeys, staking.validate) */
 	const anonBond = api.tx.staking.bond(keys.ferdie.address, AMOUNT, {
 		Staked: null,
 	});
+	const sessionKeys = api.createType('Keys', [
+		keys.alice.address,
+		keys.dave.address,
+		keys.dave.address,
+		keys.dave.address,
+		keys.dave.address,
+		keys.dave.address,
+	]);
+	const anonSetKeys = api.tx.session.setKeys(sessionKeys, '0x');
+	const anonValidate = api.tx.staking.validate({
+		commission: '100000000', // 100 million in perbill == 10%
+		blocked: false,
+	});
+	const anonStakeBatchAll = api.tx.utility.batchAll([
+		anonBond,
+		anonSetKeys,
+		anonValidate,
+	]);
 
-	/* First announce the staking.bond */
+	/* First announce the batchAll(staking.bond, staking.setKeys, staking.validate) */
 	const announceAnonBond = api.tx.proxy.announce(
 		anonAddr,
-		anonBond.method.hash
+		anonStakeBatchAll.method.hash
 	);
 	const timepointAnnounceAnonBond = await executeMultisig(
 		api,
@@ -121,14 +139,58 @@ async function main() {
 		stakingMultiAddr,
 		anonAddr,
 		STAKING_PROXY,
-		anonBond
+		anonStakeBatchAll
 	);
 	const { timepoint: timepoint6 } = await signAndSend(
 		api,
 		keys.alice,
 		proxyAnonBond
 	);
-	console.log('Alice executed proxyAnnounced(bond(Anon)) at: ', timepoint6);
+	console.log(
+		'Alice executed proxyAnnounced(batchAll(staking.bond, staking.setKeys, staking.validate)) at: ',
+		timepoint6
+	);
+
+	/* Demonstrate the attack path by making an announcement and then canceling it */
+	const changePrefs = api.tx.staking.validate({
+		commission: '1000000000',
+		blocked: false,
+	});
+	const announceChangePrefs = api.tx.proxy.announce(
+		anonAddr,
+		changePrefs.method.hash
+	);
+	await executeMultisig(api, announceChangePrefs, stakingComposite, 2);
+
+	/**
+	 * In reall life we would have a watchdog check on the announcements in chain storage.
+	 */
+	console.log(
+		'****\nThe announcement whatchdog has detected an announcement for an unknown call\n Initating cancel process\n****'
+	);
+
+	const rejectAnnouncemnent = api.tx.proxy.rejectAnnouncement(
+		stakingMultiAddr,
+		changePrefs.method.hash
+	);
+	const proxyRejectAnnouncement = api.tx.proxy.proxy(
+		anonAddr,
+		CANCEL_PROXY,
+		rejectAnnouncemnent
+	);
+	const cancelProxyRejectAnnouncement = api.tx.multisig.asMultiThreshold1(
+		otherSigs(
+			cancelComposite.map(({ address }) => address),
+			keys.charlie.address
+		),
+		proxyRejectAnnouncement
+	);
+	const { timepoint: cancelTimepoint } = await signAndSend(
+		api,
+		keys.charlie,
+		cancelProxyRejectAnnouncement
+	);
+	console.log('Announcement succesfully cancelled at: ', cancelTimepoint);
 
 	process.exit(0);
 }

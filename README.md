@@ -7,7 +7,9 @@ WIP
 Start a substrate or polkadot `--dev --tmp` node. (Use temp because we need to purge the DB between demo runs.)
 
 ```console
-TODO
+git clone https://github.com/paritytech/polkadot.git
+cd polkadot
+cargo run -- --dev --tmp
 ```
 
 Install dependencies
@@ -30,15 +32,15 @@ yarn start
   - `proxy.proxy(proxy.addProxy)`
 - Eve adds 1/3 multsig `C`, as a `CancelProxy`
   - `proxy.proxy(proxy.addProxy)`
--`M` executes `staking.bond` on behalf of `A`
-  - `multisig.approveAsMulti(proxy.announce(staking.bond))`
-  - `multisig.asMulti(proxy.announce(staking.bond))` (current stops here)
+-`M` executes `batchAll(staking.bond, staking.setKeys, batchAll(staking.bond, staking.setKeys, staking.validate))` on behalf of `A`
+  - `multisig.approveAsMulti(proxy.announce(batchAll(staking.bond, staking.setKeys, staking.validate)))`
+  - `multisig.asMulti(proxy.announce(batchAll(staking.bond, staking.setKeys, staking.validate)))` (current stops here)
   - Wait for announcement delay
-  - `proxy.proxyAnnounced(staking.bond)`
-- `M` executes `session.setKeys` on behalf of `A`
-  - ...
-- `M` executes `staking.validate` on behalf of `A`
-  - ...
+  - `proxy.proxyAnnounced(batchAll(staking.bond, staking.setKeys, staking.validate))`
+- `M` is compromised and announces a unwanted `proxy.announce(staking.validate)`, `U`, on behalf of `A`
+  - `proxy.announce(staking.validate)`
+- `C` cancels `U` on behalf of `A`
+  - `multisig.asMultiThreshold1(proxy.rejectAnnouncement(U))`
 
 ## TODO
 
