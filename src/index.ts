@@ -2,18 +2,19 @@
 import { ApiPromise, WsProvider } from '@polkadot/api';
 import { KeyringPair } from '@polkadot/keyring/types';
 import { Hash, ProxyType } from '@polkadot/types/interfaces';
-import { createKeyMulti, encodeAddress } from '@polkadot/util-crypto';
 
 import { waitUntilHeight } from './chainSync';
 import { devKeys } from './devKeys';
 import { logSeperator, waitToContinue } from './display';
 import { executeMultisig } from './executeMultisig';
+import { createAndEndowMulti } from './multisig';
 import { signAndSend } from './tx';
 
 const AMOUNT = '123456789012345';
 const THRESHOLD = 2;
 const ANNOUNCE_DELAY = 5; // 5 blocks = 30 secs
 const STAKING_PROXY = 'Staking';
+const CANCEL_PROXY = ('CancelProxy' as unknown) as ProxyType; // api does not recognize CancelProxy
 
 async function main() {
 	// Initialise the provider to connect to the local node
@@ -38,33 +39,21 @@ async function main() {
 	await waitToContinue();
 
 	/* Create CancelProxy multisig account and fund address */
+	console.log('Creating multisig account to be used as Cancel proxy for Anon');
 	const cancelComposite = [keys.charlie, keys.dave, keys.ferdie];
-	const canceMultiAddr = createKeyMulti(
-		cancelComposite.map(({ address }) => address),
-		THRESHOLD
-	);
-	const cancelSs58MultiAddr = encodeAddress(
-		canceMultiAddr,
-		api.registry.chainSS58
-	);
-	console.log(
-		`Cancel multisig address (Charlie+Dave+Ferdie): ${cancelSs58MultiAddr}`
-	);
-	console.log(
-		'\nCreating Cancel multisig account on chain by funding Cancel multisig address'
-	);
-	const { timepoint: timepoint2 } = await signAndSend(
+	const cancelProxyThreshold = 1; // Only one tx needed to execute calls as multi
+	const cancelMultiAddr = await createAndEndowMulti(
 		api,
-		keys.charlie,
-		api.tx.balances.transferKeepAlive(cancelSs58MultiAddr, AMOUNT)
+		cancelComposite,
+		cancelProxyThreshold,
+		AMOUNT
 	);
-	console.log(`Cancel multisig endowed at: `, timepoint2);
 
 	/* Add multisig as a CancelProxy to Anon */
 	const cancelProxyDelay = 0; // NO delay, NO announcements neccesary
 	const addCancelProxyCall = api.tx.proxy.addProxy(
-		cancelSs58MultiAddr,
-		('CancelProxy' as unknown) as ProxyType, // api does not recognize CancelProxy
+		cancelMultiAddr,
+		CANCEL_PROXY,
 		cancelProxyDelay
 	);
 	const { timepoint: timepoint3 } = await signAndSend(
@@ -77,37 +66,20 @@ async function main() {
 	await waitToContinue();
 
 	/* Create Staking multisig address and fund account */
+	console.log('Creating multisig account to be used as Staking proxy for Anon');
 	// Input the addresses that will make up the multisig account.
 	const stakingComposite = [keys.alice, keys.dave, keys.bob];
 	// Address as a byte array.
-	const stakingCompositeAddr = createKeyMulti(
-		stakingComposite.map(({ address }) => address),
-		THRESHOLD
-	);
-	// Convert byte array to SS58 encoding.
-	const ss58StakingCompositeAddr = encodeAddress(
-		stakingCompositeAddr,
-		api.registry.chainSS58
-	);
-	console.log(
-		`Staking multisig address (Alice+Bob+Dave): ${ss58StakingCompositeAddr}`
-	);
-	console.log(
-		'\nCreating staking multisig account on chain by funding multisig address'
-	);
-	const { timepoint: timepoint4 } = await signAndSend(
+	const stakingMultiAddr = await createAndEndowMulti(
 		api,
-		keys.alice,
-		api.tx.balances.transferKeepAlive(ss58StakingCompositeAddr, AMOUNT)
+		stakingComposite,
+		THRESHOLD,
+		AMOUNT
 	);
-	console.log(`Staking multisig endowed at: `, timepoint4);
-	logSeperator();
-	await waitToContinue();
 
 	/* Add multisig as a staking proxy to Anon account */
-
 	const addStakingProxyCall = api.tx.proxy.addProxy(
-		ss58StakingCompositeAddr,
+		stakingMultiAddr,
 		STAKING_PROXY,
 		ANNOUNCE_DELAY
 	);
@@ -116,7 +88,7 @@ async function main() {
 		keys.eve,
 		api.tx.proxy.proxy(anonAddr, 'Any', addStakingProxyCall)
 	);
-	console.log(`Staking multisig proxy added at: `, timepoint5);
+	console.log(`Staking multisig added as proxy to Anon at: `, timepoint5);
 	logSeperator();
 	await waitToContinue();
 
@@ -146,7 +118,7 @@ async function main() {
 
 	/* Then execute the staking.bond */
 	const proxyAnonBond = api.tx.proxy.proxyAnnounced(
-		ss58StakingCompositeAddr,
+		stakingMultiAddr,
 		anonAddr,
 		STAKING_PROXY,
 		anonBond
@@ -171,7 +143,14 @@ async function createAnon(
 	const info: { anonAddr: string; hash: Hash } = await new Promise(
 		(resovle, _reject) => {
 			const tx = api.tx.proxy.anonymous('Any', anonProxyDelay, anonProxyIndex);
-			console.log('Submitting tx:  ', tx.method.toHuman());
+			const {
+				method: { section, method, args },
+			} = tx;
+			console.log(
+				`Submitting tx:  ${section}.${method}(${args
+					.map((a) => JSON.stringify(a.toHuman()))
+					.join(', ')})`
+			);
 			void tx.signAndSend(alice, ({ status, events, dispatchError }) => {
 				if (dispatchError) {
 					if (dispatchError.isModule) {

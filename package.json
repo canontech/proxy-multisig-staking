@@ -3,13 +3,14 @@
   "version": "0.1.0",
   "main": "build/index.js",
   "repository": "https://github.com/emostov/proxy-staking-demo.git",
-  "author": "emostov <32168567+emostov@users.noreply.github.com>",
+  "author": "emostov <zeke@parity.io>",
   "license": "APACHE-2.0",
   "private": false,
   "scripts": {
     "lint": "eslint",
     "build": "tsc",
-    "start": "./node_modules/.bin/ts-node src/index.ts"
+    "start": "./node_modules/.bin/ts-node src/index.ts",
+    "start:polkadot": "./bin/polkadot --dev --tmp"
   },
   "devDependencies": {
     "@substrate/dev": "^0.5.2",
