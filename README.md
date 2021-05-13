@@ -1,7 +1,5 @@
 # proxy-multisig-staking
 
-WIP
-
 ## Run
 
 Start a substrate or polkadot `--dev --tmp` node. (Use temp because we need to purge the DB between demo runs.)
@@ -34,7 +32,7 @@ yarn start
   - `proxy.proxy(proxy.addProxy)`
 -`M` executes `batchAll(staking.bond, staking.setKeys, batchAll(staking.bond, staking.setKeys, staking.validate))` on behalf of `A`
   - `multisig.approveAsMulti(proxy.announce(batchAll(staking.bond, staking.setKeys, staking.validate)))`
-  - `multisig.asMulti(proxy.announce(batchAll(staking.bond, staking.setKeys, staking.validate)))` (current stops here)
+  - `multisig.asMulti(proxy.announce(batchAll(staking.bond, staking.setKeys, staking.validate)))`
   - Wait for announcement delay
   - `proxy.proxyAnnounced(batchAll(staking.bond, staking.setKeys, staking.validate))`
 - `M` is compromised and announces a unwanted `proxy.announce(staking.validate)`, `U`, on behalf of `A`
