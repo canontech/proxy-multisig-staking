@@ -47,10 +47,11 @@ yarn start
   - `multisig.asMulti(proxy.announce(batchAll(staking.bond, staking.setKeys, staking.validate)))`
   - Wait for announcement delay
   - `proxy.proxyAnnounced(batchAll(staking.bond, staking.setKeys, staking.validate))`
-- `M` is compromised and announces a unwanted `proxy.announce(staking.validate)`, `U`, on behalf of `A`
+- `M` is compromised and announces a unwanted `proxy.announce(staking.validate)`, `u`, on behalf of `A`
   - `proxy.announce(staking.validate)`
-- `C` cancels `U` on behalf of `A`
-  - `multisig.asMultiThreshold1(proxy.rejectAnnouncement(U))`
+- Announcement watchdog witnesses an unexpected proxy announcement and alerts `C` composite members.
+- `C` member cancels `u` on behalf of `A`
+  - `multisig.asMultiThreshold1(proxy.rejectAnnouncement(u))`
 
 ## TODO
 
