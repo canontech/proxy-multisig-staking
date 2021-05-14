@@ -2,7 +2,7 @@
 
 ## Run
 
-Start a substrate or polkadot `--dev --tmp` node. (Use temp because we need to purge the DB between demo runs.)
+Start a substrate or polkadot `--dev --tmp` node. (We use `--tmp` because we need to purge the DB between demo runs.)
 
 ```console
 git clone https://github.com/paritytech/polkadot.git
