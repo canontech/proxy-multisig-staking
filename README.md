@@ -7,12 +7,19 @@ Demo of institutional grade key management for Substrate staking operations; uti
 
 ## Run
 
-Start a substrate or polkadot `--dev --tmp` node. (We use `--tmp` because we need to purge the DB between demo runs.)
+In one terminal, start a substrate or polkadot `--dev --tmp` node. (We use `--tmp` because we need to purge the DB between demo runs.) If you compile from scratch it can take up to 30 minutes for the node to start.
 
 ```console
 git clone https://github.com/paritytech/polkadot.git
 cd polkadot
 cargo run -- --dev --tmp
+```
+
+In another terminal download this repository
+
+```console
+git clone https://github.com/emostov/proxy-multisig-staking.git
+cd proxy-multisig-staking
 ```
 
 Install dependencies
