@@ -1,8 +1,13 @@
 # proxy-multisig-staking
 
+## Overview
+
+Demo of institutional grade key management for Substrate staking operations; utilizing multisigs & {anonymous, cancel, staking} proxies. Features usage of the [multisig](https://github.com/paritytech/substrate/tree/master/frame/multisig) and [proxy](https://github.com/paritytech/substrate/tree/master/frame/proxy) [Substrate](https://github.com/paritytech/substrate) FRAME pallets.
+
+
 ## Run
 
-Start a substrate or polkadot `--dev --tmp` node. (Use temp because we need to purge the DB between demo runs.)
+Start a substrate or polkadot `--dev --tmp` node. (We use `--tmp` because we need to purge the DB between demo runs.)
 
 ```console
 git clone https://github.com/paritytech/polkadot.git
