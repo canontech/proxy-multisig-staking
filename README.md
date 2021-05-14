@@ -2,7 +2,7 @@
 
 ## Overview
 
-Demo of institutional grade key management for Substrate staking operations; utilizing multisigs & {anonymous, cancel, staking} proxies. Features usage of the [multisig](https://github.com/paritytech/substrate/tree/master/frame/multisig) and [proxy](https://github.com/paritytech/substrate/tree/master/frame/proxy) [Substrate](https://github.com/paritytech/substrate) FRAME pallets.
+Demo of institutional grade key management for Substrate staking operations; utilizing multisigs, anonymous proxy accounts, and `Staking` + `CancelProxy` proxy filters. Features usage of the [multisig](https://github.com/paritytech/substrate/tree/master/frame/multisig) and [proxy](https://github.com/paritytech/substrate/tree/master/frame/proxy) [Substrate](https://github.com/paritytech/substrate) FRAME pallets.
 
 
 ## Run
