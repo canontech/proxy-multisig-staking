@@ -6,15 +6,14 @@ import { Hash, ProxyType } from '@polkadot/types/interfaces';
 import { waitUntilHeight } from './chainSync';
 import { devKeys } from './devKeys';
 import { logSeperator, waitToContinue } from './display';
-import { executeMultisig } from './executeMultisig';
-import { createAndEndowMulti, otherSigs } from './multisig';
-import { signAndSend } from './tx';
+import { createAndEndowMulti, executeMultisig, otherSigs } from './multisig';
+import { signAndSend } from './signAndSend';
 
 const AMOUNT = '123456789012345';
 const THRESHOLD = 2;
 const ANNOUNCE_DELAY = 5; // 5 blocks = 30 secs
 const STAKING_PROXY = 'Staking';
-const CANCEL_PROXY = ('CancelProxy' as unknown) as ProxyType; // api does not recognize CancelProxy
+const CANCEL_PROXY = 'CancelProxy' as unknown as ProxyType; // api does not recognize CancelProxy
 
 async function main() {
 	// Initialise the provider to connect to the local node

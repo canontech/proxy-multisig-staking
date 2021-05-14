@@ -6,7 +6,16 @@ import { Hash } from '@polkadot/types/interfaces';
 
 import { Timepoint } from './chainSync';
 
-// TODO maybe iterate through events and display
+/**
+ * Sign and send a transaction, waiting until it is included in block and returning
+ * the transactions timepoint.
+ *
+ * This will log the events associated with the tx as well.
+ *
+ * @param api
+ * @param origin
+ * @param tx
+ */
 export async function signAndSend(
 	api: ApiPromise,
 	origin: KeyringPair,
